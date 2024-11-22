@@ -9,8 +9,11 @@ from transformers import (
 )
 from peft import PeftModel, PeftConfig
 
-from configs import CACHE_DIR, LANGUAGE, TASK, PRETRAINED_MODEL_NAME, KODES, DIGITS
-from utils import split_to_subwords, process
+from configs import (
+    CACHE_DIR, LANGUAGE, TASK, PRETRAINED_MODEL_NAME, KODES, DIGITS, 
+    MAX_AUDIO_DURATION
+)
+from utils import split_to_subwords, process, has_valid_duration
 
 
 st.title(":blue[Nepali Speech Recognition] :sunglasses:")
@@ -52,6 +55,12 @@ if uploaded_audio is not None:
     
     with open(filepath, "wb") as f:
         f.write(uploaded_audio.getbuffer())
+    
+    ## check if audio if less than 30 seconds  
+    if not has_valid_duration(filepath):
+        st.error(f"Audio duration is greater than {MAX_AUDIO_DURATION} seconds.")
+        st.stop()
+    
     st.audio(filepath)
     
     if pipe:=st.session_state.get('pipe'):

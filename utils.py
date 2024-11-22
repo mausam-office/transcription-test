@@ -1,7 +1,7 @@
 import editdistance
-
+from scipy.io import wavfile 
 from difflib import SequenceMatcher
-from configs import KODES, DIGITS, N_MIDDLE_WORDS
+from configs import KODES, DIGITS, N_MIDDLE_WORDS, MAX_AUDIO_DURATION
 
 def similarity_score(word1, word2):
     return SequenceMatcher(None, word1, word2).ratio()
@@ -109,3 +109,14 @@ def process(text_splitted, single_digit=False):
     
     text = ' '.join(prior_digit + middle_words + posterior_digits)
     return text
+
+
+def calc_audio_duration(filepath):
+    sample_rate, data = wavfile.read(filepath)
+    duration = len(data) / sample_rate
+    return duration
+
+
+def has_valid_duration(filepath):
+    duration = calc_audio_duration(filepath)
+    return True if duration < MAX_AUDIO_DURATION else False

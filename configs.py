@@ -3,6 +3,7 @@ LANGUAGE = "Nepali"
 TASK = "transcribe"
 N_MIDDLE_WORDS = 2
 PRETRAINED_MODEL_NAME = "exps-whisper-small-transcriber/exp-3-new-words/checkpoint-6009"
+MAX_AUDIO_DURATION = 25.0
 
 KODES = [
     'अखण्ड','अगुवा','अग्रज','अजय','अजर','अटल','अतिथी','अतुल','अथाह','अनन्त','अनुज','अपार','अपुर्ब', 
