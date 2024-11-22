@@ -121,7 +121,8 @@ if os.path.exists(filepath):
         st.stop()
 
 if audio and st.button("Transcribe"):
-    text = transcribe(filepath)
+    with st.spinner("Transcribing..."):
+        text = transcribe(filepath)
 
     st.text("अनुवाद: " + text)
     
