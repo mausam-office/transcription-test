@@ -19,26 +19,28 @@ from utils import split_to_subwords, process, has_valid_duration
 st.title(":blue[Nepali Speech Recognition] :sunglasses:")
 
 def model_pipeline():
-    peft_config = PeftConfig.from_pretrained(PRETRAINED_MODEL_NAME, cache_dir=CACHE_DIR)
-    model = WhisperForConditionalGeneration.from_pretrained(
-        peft_config.base_model_name_or_path, 
-        # load_in_8bit=True, 
-        device_map="auto", 
-        cache_dir=CACHE_DIR
-    )
-    model = PeftModel.from_pretrained(model, PRETRAINED_MODEL_NAME)
-    tokenizer = WhisperTokenizer.from_pretrained(
-        str(peft_config.base_model_name_or_path), language=LANGUAGE, task=TASK, cache_dir=CACHE_DIR 
-    )
-    processor = WhisperProcessor.from_pretrained(
-        str(peft_config.base_model_name_or_path), language=LANGUAGE, task=TASK, cache_dir=CACHE_DIR
-    )
-    feature_extractor = processor.feature_extractor # type: ignore
-    forced_decoder_ids = processor.get_decoder_prompt_ids(language=LANGUAGE, task=TASK) # type: ignore
-    pipe = AutomaticSpeechRecognitionPipeline(
-        model=model, tokenizer=tokenizer, feature_extractor=feature_extractor # type: ignore
-    )
-    return pipe
+    with st.spinner("Loading transcription model. It may take a while."):
+        peft_config = PeftConfig.from_pretrained(PRETRAINED_MODEL_NAME, cache_dir=CACHE_DIR)
+        model = WhisperForConditionalGeneration.from_pretrained(
+            peft_config.base_model_name_or_path, 
+            # load_in_8bit=True, 
+            device_map="auto", 
+            cache_dir=CACHE_DIR
+        )
+        model = PeftModel.from_pretrained(model, PRETRAINED_MODEL_NAME)
+        tokenizer = WhisperTokenizer.from_pretrained(
+            str(peft_config.base_model_name_or_path), language=LANGUAGE, task=TASK, cache_dir=CACHE_DIR 
+        )
+        processor = WhisperProcessor.from_pretrained(
+            str(peft_config.base_model_name_or_path), language=LANGUAGE, task=TASK, cache_dir=CACHE_DIR
+        )
+        feature_extractor = processor.feature_extractor # type: ignore
+        forced_decoder_ids = processor.get_decoder_prompt_ids(language=LANGUAGE, task=TASK) # type: ignore
+        pipe = AutomaticSpeechRecognitionPipeline(
+            model=model, tokenizer=tokenizer, feature_extractor=feature_extractor # type: ignore
+        )
+        st.toast("Model Loaded")
+        return pipe
 
 
 if st.session_state.get('pipe') is None:
