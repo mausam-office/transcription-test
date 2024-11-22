@@ -48,6 +48,7 @@ if uploaded_audio is not None:
     file_name += f"-{str(datetime.now()).replace(':','-')}"
     
     filepath = os.path.join("audio_files", file_name + file_extension)
+    os.makedirs("audio_files", exist_ok=True)
     
     with open(filepath, "wb") as f:
         f.write(uploaded_audio.getbuffer())
