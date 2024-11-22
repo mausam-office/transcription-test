@@ -1,6 +1,9 @@
+from gc import callbacks
 import os
 import streamlit as st
 from datetime import datetime
+import streamlit_mic_recorder
+from streamlit_mic_recorder import mic_recorder    
 from transformers import (
     AutomaticSpeechRecognitionPipeline,
     WhisperForConditionalGeneration,
@@ -8,6 +11,7 @@ from transformers import (
     WhisperProcessor
 )
 from peft import PeftModel, PeftConfig
+st.set_page_config (page_title="अनुवादक", layout="wide", )
 
 from configs import (
     CACHE_DIR, LANGUAGE, TASK, PRETRAINED_MODEL_NAME, KODES, DIGITS, 
@@ -16,7 +20,11 @@ from configs import (
 from utils import split_to_subwords, process, has_valid_duration
 
 
-st.title(":blue[Nepali Speech Recognition] :sunglasses:")
+filepath = os.path.join("audio_files", "audio.wav")
+audio_rec = None
+audio_upload = None
+
+st.title(":blue[Kataho Code Recognition] 🎤 :rainbow[अनुवादक]")
 
 def model_pipeline():
     with st.spinner("Loading transcription model. It may take a while."):
@@ -42,52 +50,84 @@ def model_pipeline():
         st.toast("Model Loaded")
         return pipe
 
-
-if st.session_state.get('pipe') is None:
-    st.session_state['pipe'] = model_pipeline()
-
-uploaded_audio = st.file_uploader("Upload audio file.", type=['wav'])
-
-if uploaded_audio is not None:
-    file_name, file_extension = os.path.splitext(uploaded_audio.name)
-    file_name += f"-{str(datetime.now()).replace(':','-')}"
-    
-    filepath = os.path.join("audio_files", file_name + file_extension)
-    os.makedirs("audio_files", exist_ok=True)
-    
-    with open(filepath, "wb") as f:
-        f.write(uploaded_audio.getbuffer())
-    
-    ## check if audio if less than 30 seconds  
-    if not has_valid_duration(filepath):
-        st.error(f"Audio duration is greater than {MAX_AUDIO_DURATION} seconds.")
-        st.stop()
-    
-    st.audio(filepath)
-    
+def transcribe(filepath=filepath):
     if pipe:=st.session_state.get('pipe'):
         result_np = pipe(filepath)
     else:
         st.toast("Pipeline is not loaded")
         st.stop()
     text: str = result_np['text'] # type: ignore
-    
+
     text = text.replace('�', '') 
-    
-    words = []
-    
+
     text_splitted = text.split() # type: ignore
-    _text_spiltted = []
+    _text_splitted = []
     for word in text_splitted:
-        _text_spiltted.extend(split_to_subwords(word, KODES + DIGITS))
-    
-    text_splitted = text_splitted
-    
+        _text_splitted.extend(split_to_subwords(word, KODES + DIGITS))
+
+    text_splitted = _text_splitted
+
     if text_splitted:
         text = process(text_splitted)
     else:
         text = ''
+        
+    return text
+
+
+if st.session_state.get('pipe') is None:
+    st.session_state['pipe'] = model_pipeline()
     
-    st.text("Transcription: " + text)
+    
+os.makedirs("audio_files", exist_ok=True)
+
+audio_mode = st.radio(
+    "**Select audio input method**", 
+    ['Record', 'Upload'], 
+    captions=['Record audio in browser', 'Upload audio file from device'],
+    horizontal=True
+)
+
+if audio_mode == "Record":
+    audio = mic_recorder(
+        start_prompt="Start recording",
+        stop_prompt="Stop recording",
+        just_once=False,
+        use_container_width=False,
+        format="wav",
+        callback=None,
+        args=(),
+        kwargs={},
+        key=None
+    )
+    
+    if audio is not None:
+        audio = audio["bytes"]
+        with open(filepath, 'wb') as f:
+            f.write(audio)
+elif audio_mode == "Upload":
+    audio = st.file_uploader("Upload audio file.", type=['wav'])
+    
+    if audio is not None:
+        with open(filepath, "wb") as f:
+            f.write(audio.getbuffer())
+            
+
+## check if audio if less than 30 seconds  
+if os.path.exists(filepath):
+    st.audio(filepath)
+    if not has_valid_duration(filepath):
+        st.error(f"Audio duration is greater than {MAX_AUDIO_DURATION} seconds.")
+        st.stop()
+
+if audio and st.button("Transcribe"):
+    text = transcribe(filepath)
+
+    st.text("अनुवाद: " + text)
+    
+audio = None
+
+if os.path.exists(filepath):
+    os.remove(filepath)
     
 
