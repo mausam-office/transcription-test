@@ -1,4 +1,3 @@
-from gc import callbacks
 import os
 import streamlit as st
 from datetime import datetime
@@ -63,7 +62,9 @@ def transcribe(filepath=filepath):
     text_splitted = text.split() # type: ignore
     _text_splitted = []
     for word in text_splitted:
-        _text_splitted.extend(split_to_subwords(word, KODES + DIGITS))
+        if word not in KODES + DIGITS:
+            _text_splitted.extend(split_to_subwords(word, KODES + DIGITS))
+        _text_splitted.append(word)
 
     text_splitted = _text_splitted
 
