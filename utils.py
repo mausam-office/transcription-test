@@ -25,7 +25,7 @@ def find_best_match(candidate, word_dict):
     return best_match
 
     
-def closest_word_dist_priority(candidate, vocabulary, thresh_dist=4):
+def closest_word_dist_priority(candidate, vocabulary, thresh_dist=3):
     
     if candidate in vocabulary:
         return candidate
