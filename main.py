@@ -18,12 +18,11 @@ from configs import (
     LANGUAGE,
     TASK,
     PRETRAINED_MODEL_NAME,
-    KODES,
-    DIGITS,
     MAX_AUDIO_DURATION,
 )
 from utils import (
-    split_to_subwords,
+    replaces,
+    subword_to_words,
     process,
     has_valid_duration,
     kataho_code_with_digits,
@@ -77,24 +76,11 @@ def transcribe(filepath=filepath):
         st.stop()
     text: str = result_np["text"]  # type: ignore
 
-    text = text.replace("�", "")
+    text = replaces(text)
 
-    for letter in string.ascii_letters:
-        text = text.replace(letter, "")
+    text_splitted = subword_to_words(text)
 
-    text_splitted = text.split()  # type: ignore
-    _text_splitted = []
-    for word in text_splitted:
-        if word not in KODES + DIGITS:
-            _text_splitted.extend(split_to_subwords(word, KODES + DIGITS))
-        else:
-            _text_splitted.append(word)
-    text_splitted = _text_splitted
-
-    if text_splitted:
-        text = process(text_splitted)
-    else:
-        text = ""
+    text = process(text_splitted) if text_splitted else ""
 
     return text
 

@@ -1,5 +1,6 @@
 import editdistance
 import random
+import string
 from scipy.io import wavfile
 from difflib import SequenceMatcher
 from configs import (
@@ -12,6 +13,26 @@ from configs import (
     NEP_ENG_DIGITS,
     ENG_NEP_DIGITS,
 )
+
+
+def replaces(text):
+    text = text.replace("�", "")
+
+    for letter in string.ascii_letters:
+        text = text.replace(letter, "")
+
+    return text
+
+
+def subword_to_words(text):
+    text_splitted = text.split()  # type: ignore
+    _text_splitted = []
+    for word in text_splitted:
+        if word not in KODES + DIGITS:
+            _text_splitted.extend(split_to_subwords(word, KODES + DIGITS))
+        else:
+            _text_splitted.append(word)
+    return _text_splitted
 
 
 def similarity_score(word1, word2):
@@ -328,11 +349,8 @@ def replace_words_with_digits(kode_splitted):
             NEP_ENG_DIGITS[WORD_DIGITS_MAPPING[word]] if word in DIGITS else word
             for word in kode_splitted
         ]
-    print(f"{kode_modified = }")
     kode_modified = format_prior_digits(kode_modified)
-    print(f"after prior; {kode_modified = }")
     kode_modified = format_posterior_digits(kode_modified, includes_multipler)
-    print(f"after posterior; {kode_modified = }")
 
     return kode_modified
 
