@@ -31,8 +31,7 @@ from utils import (
 
 
 filepath = os.path.join("audio_files", "audio.wav")
-audio_rec = None
-audio_upload = None
+audio = None
 
 st.title(":rainbow[Kataho Code Recognition] 🎤 :rainbow[अनुवादक]")
 
