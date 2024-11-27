@@ -2,7 +2,16 @@ import editdistance
 import random
 from scipy.io import wavfile
 from difflib import SequenceMatcher
-from configs import KODES, DIGITS, N_MIDDLE_WORDS, MAX_AUDIO_DURATION
+from configs import (
+    WORD_DIGITS_MAPPING,
+    KODES,
+    DIGITS,
+    N_MIDDLE_WORDS,
+    MAX_AUDIO_DURATION,
+    NEPALI_DIGITS,
+    NEP_ENG_DIGITS,
+    ENG_NEP_DIGITS,
+)
 
 
 def similarity_score(word1, word2):
@@ -99,20 +108,20 @@ def process(text_splitted, single_digit=False):
     if word_idx_1 in DIGITS[:10]:
         single_digit = True
 
-    if len(text_splitted) < 5:
-        temp = []
-        for word in text_splitted:
-            if len(word) > 4 and word.endswith("हजार"):
-                temp.extend([word.replace("हजार", ""), "हजार"])
-            elif (
-                len(word) > 2
-                and word.endswith("सय")
-                and (closest_word_dist_priority(word, DIGITS) != "उनान्सय")
-            ):
-                temp.extend([word.replace("सय", ""), "सय"])
-            else:
-                temp.append(word)
-        text_splitted = temp
+    # if len(text_splitted) < 5:
+    temp = []
+    for word in text_splitted:
+        if len(word) > 4 and word.endswith("हजार"):
+            temp.extend([word.replace("हजार", ""), "हजार"])
+        elif (
+            len(word) > 2
+            and word.endswith("सय")
+            and (closest_word_dist_priority(word, DIGITS) != "उनान्सय")
+        ):
+            temp.extend([word.replace("सय", ""), "सय"])
+        else:
+            temp.append(word)
+    text_splitted = temp
 
     second_word = (
         closest_word_dist_priority(text_splitted[1], DIGITS[:10])
@@ -157,11 +166,12 @@ def process(text_splitted, single_digit=False):
     prior_digit = [
         closest_word_dist_priority(
             word,
-            (
-                DIGITS[10:]
-                if (len(prior_digit) == 1 and not single_digit)
-                else DIGITS[:10]
-            ),
+            DIGITS,
+            # (
+            #     DIGITS[10:]
+            #     if (len(prior_digit) == 1 and not single_digit)
+            #     else DIGITS[:10]
+            # ),
         )
         for word in prior_digit
     ]
@@ -183,3 +193,156 @@ def calc_audio_duration(filepath):
 def has_valid_duration(filepath):
     duration = calc_audio_duration(filepath)
     return True if duration < MAX_AUDIO_DURATION else False
+
+
+def get_posterior_digits_first_index(kode_chunks):
+    middle_word_found = False
+    posterior_digits_first_index = None
+    for idx, word in enumerate(kode_chunks):
+        if isinstance(word, str):
+            middle_word_found = True
+
+        if middle_word_found and isinstance(word, int):
+            posterior_digits_first_index = idx
+            break
+    return posterior_digits_first_index
+
+
+def get_prior_digits_last_index(kode_chunks):
+    prior_digits_last_index = None
+    for idx, word in enumerate(kode_chunks):
+        if isinstance(word, str):
+            prior_digits_last_index = idx
+            break
+    return prior_digits_last_index
+
+
+def eng_to_nep_digits(kodes_chunks):
+    kode_modified_new = []
+    for ele in kodes_chunks:
+        np_ele = ""
+        if isinstance(ele, int):
+            ele_str = str(ele)
+            if len(ele_str) >= 1:
+                for char in ele_str:
+                    char = ENG_NEP_DIGITS[int(char)]
+                    np_ele += char
+                kode_modified_new.append(np_ele)
+        else:
+            kode_modified_new.append(ele)
+    return kode_modified_new
+
+
+def format_prior_digits(kode_modified: list):
+    # find index of digits after middle words
+    prior_digits_last_index = get_prior_digits_last_index(kode_modified)
+
+    kode_modified = [str(word) for word in kode_modified]
+    val = "".join(kode_modified[:prior_digits_last_index])
+
+    kode_modified = [val] + kode_modified[prior_digits_last_index:]
+    kode_modified = [int(word) if word.isnumeric() else word for word in kode_modified]
+    return kode_modified
+
+
+def format_posterior_digits(kode_modified: list, includes_multipler: bool):
+    posterior_digits_first_index = get_posterior_digits_first_index(kode_modified)
+    if not includes_multipler:
+        kode_modified = [str(word) for word in kode_modified]
+        val = "".join(kode_modified[posterior_digits_first_index:])
+        kode_modified = kode_modified[:posterior_digits_first_index] + [val]
+        kode_modified = [
+            int(word) if word.isnumeric() else word for word in kode_modified
+        ]
+    else:
+        prior_digits_last_index = (
+            idx if (idx := get_prior_digits_last_index(kode_modified)) else 0
+        )
+        val = 0
+        for idx in range(prior_digits_last_index, len(kode_modified)):
+            if kode_modified[idx] == 1000:
+                if isinstance(kode_modified[idx - 1], int):
+                    val += kode_modified[idx - 1] * kode_modified[idx]
+                else:
+                    val += kode_modified[idx]
+            elif kode_modified[idx] == 100:
+                if (
+                    isinstance(kode_modified[idx - 1], int)
+                    and kode_modified[idx - 1] != 1000
+                ):
+                    val += kode_modified[idx - 1] * kode_modified[idx]
+                else:
+                    val += kode_modified[idx]
+            elif (
+                kode_modified[idx - 1] == 1000 or kode_modified[idx - 1] == 100
+            ) and kode_modified[idx] == kode_modified[-1]:
+                val += kode_modified[idx]
+
+        kode_modified = kode_modified[:posterior_digits_first_index] + [val]
+
+    kode_modified = eng_to_nep_digits(kode_modified)
+
+    return kode_modified
+
+
+def pad_prior_digits(kode_chunks):
+    if len(kode_chunks[0]) != 2:
+        n_pad = 2 - len(kode_chunks[0])
+        if n_pad < 0:
+            print("2 digit at max")
+        elif n_pad == 0:
+            print("No padding required")
+        else:
+            for i in range(n_pad):
+                kode_chunks[0] = NEPALI_DIGITS[0] + kode_chunks[0]
+    return kode_chunks
+
+
+def pad_posterior_digits(kode_chunks):
+    if len(kode_chunks[-1]) != 4:
+        n_pad = 4 - len(kode_chunks[-1])
+        if n_pad < 0:
+            print("4 digit at max")
+        elif n_pad == 0:
+            print("No padding required")
+        else:
+            for i in range(n_pad):
+                kode_chunks[-1] = NEPALI_DIGITS[0] + kode_chunks[-1]
+    return kode_chunks
+
+
+def replace_words_with_digits(kode_splitted):
+    includes_multipler = "सय" in kode_splitted or "हजार" in kode_splitted
+    if includes_multipler:
+        kode_modified = []
+
+        for idx in range(len(kode_splitted)):
+            current_word = kode_splitted[idx]
+
+            if current_word in DIGITS:
+                kode_modified.append(NEP_ENG_DIGITS[WORD_DIGITS_MAPPING[current_word]])
+            else:
+                kode_modified.append(current_word)
+    else:
+        kode_modified = [
+            NEP_ENG_DIGITS[WORD_DIGITS_MAPPING[word]] if word in DIGITS else word
+            for word in kode_splitted
+        ]
+    print(f"{kode_modified = }")
+    kode_modified = format_prior_digits(kode_modified)
+    print(f"after prior; {kode_modified = }")
+    kode_modified = format_posterior_digits(kode_modified, includes_multipler)
+    print(f"after posterior; {kode_modified = }")
+
+    return kode_modified
+
+
+def kataho_code_with_digits(kode: str):
+    kode_splitted = kode.strip().split()
+
+    kode_modified = replace_words_with_digits(kode_splitted)
+
+    kode_modified = pad_prior_digits(kode_modified)
+    kode_modified = pad_posterior_digits(kode_modified)
+
+    return " ".join(kode_modified)

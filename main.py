@@ -22,7 +22,12 @@ from configs import (
     DIGITS,
     MAX_AUDIO_DURATION,
 )
-from utils import split_to_subwords, process, has_valid_duration
+from utils import (
+    split_to_subwords,
+    process,
+    has_valid_duration,
+    kataho_code_with_digits,
+)
 
 
 filepath = os.path.join("audio_files", "audio.wav")
@@ -143,7 +148,7 @@ if os.path.exists(filepath):
 if audio and st.button("Transcribe"):
     with st.spinner("Transcribing..."):
         text = transcribe(filepath)
-
+        text = kataho_code_with_digits(text)
     st.text("अनुवाद: " + text)
 
 audio = None
