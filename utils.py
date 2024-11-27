@@ -1,5 +1,6 @@
 import editdistance
 import random
+import streamlit as st
 import string
 from scipy.io import wavfile
 from difflib import SequenceMatcher
@@ -310,9 +311,9 @@ def pad_prior_digits(kode_chunks):
     if len(kode_chunks[0]) != 2:
         n_pad = 2 - len(kode_chunks[0])
         if n_pad < 0:
-            print("2 digit at max")
+            st.toast("2 digit at max for left digits")
         elif n_pad == 0:
-            print("No padding required")
+            st.toast("No padding required")
         else:
             for i in range(n_pad):
                 kode_chunks[0] = NEPALI_DIGITS[0] + kode_chunks[0]
@@ -323,9 +324,9 @@ def pad_posterior_digits(kode_chunks):
     if len(kode_chunks[-1]) != 4:
         n_pad = 4 - len(kode_chunks[-1])
         if n_pad < 0:
-            print("4 digit at max")
+            st.toast("4 digit at max for right digits")
         elif n_pad == 0:
-            print("No padding required")
+            st.toast("No padding required")
         else:
             for i in range(n_pad):
                 kode_chunks[-1] = NEPALI_DIGITS[0] + kode_chunks[-1]
